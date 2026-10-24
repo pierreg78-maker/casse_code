@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Casse-code",
+      "hasCanvas": false,
+      "bodyTextLen": 380,
+      "bodyTextHash": "0bf33d0654633b54c848bb714dc141960ca65c76c6dff4a2fb532db1f50ad22c",
+      "bodyTextPrefix": "MASTERMIND Casse-code Un code est caché. Chaque essai dit ce qui",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Casse-code",
+      "hasCanvas": false,
+      "bodyTextLen": 380,
+      "bodyTextHash": "0bf33d0654633b54c848bb714dc141960ca65c76c6dff4a2fb532db1f50ad22c",
+      "bodyTextPrefix": "MASTERMIND Casse-code Un code est caché. Chaque essai dit ce qui",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-preview.json"
+}

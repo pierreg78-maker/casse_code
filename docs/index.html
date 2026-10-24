@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Casse-code</title>
+  <meta name="description" content="Casse-code, un Mastermind jouable : devinez le code couleur." />
+  <meta name="theme-color" content="#140f0c" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,680&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --color-ink: #140f0c;
+      --color-espresso: #2a1d14;
+      --color-felt: #1b3d31;
+      --color-ivory: #f4ead7;
+      --color-ivory-dim: #cbbfa6;
+      --color-brass: #c6a15b;
+      --color-line: #3d2c22;
+      --font-display: "Fraunces", Georgia, serif;
+      --font-sans: "Outfit", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      background: radial-gradient(1200px 520px at 50% -12%, #3a291c, transparent 62%), var(--color-ink);
+      color: var(--color-ivory);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+    }
+    button { font: inherit; }
+    button:not(:disabled) { cursor: pointer; }
+    .shell {
+      height: 100dvh;
+      max-width: 28rem;
+      margin-inline: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .shell.menu { overflow-y: auto; }
+    .shell.play { overflow: hidden; }
+    .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+    .pad { display: flex; flex-direction: column; gap: 1.25rem; padding: 1.25rem 1rem; }
+    .kicker { margin: 0; font-size: 0.75rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-brass); }
+    h1 { margin: 0; font-family: var(--font-display); font-size: 3rem; font-weight: 560; line-height: 1; }
+    .play h1 { font-size: 1.9rem; }
+    h2 { margin: 0; font-family: var(--font-display); font-size: 1.9rem; font-weight: 560; line-height: 1; }
+    p { margin: 0; }
+    .dim { color: var(--color-ivory-dim); }
+    .row-head { display: flex; justify-content: space-between; gap: 0.75rem; align-items: flex-start; }
+    .icon-btn {
+      display: grid; place-items: center; width: 2.75rem; height: 2.75rem;
+      border-radius: 999px; border: 1px solid var(--color-line); background: transparent; color: var(--color-ivory);
+    }
+    .actions { display: flex; gap: 0.5rem; }
+    .logo { display: flex; gap: 0.3rem; margin-bottom: 0.75rem; }
+    .logo i { width: 0.55rem; height: 0.55rem; border-radius: 999px; display: block; }
+    .case {
+      border-radius: 1.25rem;
+      border: 1px solid color-mix(in srgb, var(--color-brass) 42%, transparent);
+      background: linear-gradient(180deg, rgb(255 255 255 / 0.05), transparent 28%), var(--color-felt);
+      box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.35), 0 18px 40px rgb(0 0 0 / 0.28);
+    }
+    .case.is-shaking { animation: nudge 280ms ease-out; }
+    .rack { min-height: 0; overflow-y: auto; overscroll-behavior: contain; flex: 1; padding: 0.5rem; }
+    .board { display: flex; flex-direction: column; min-height: 0; flex: 1; margin: 0 0.75rem; }
+    .row {
+      display: grid; grid-template-columns: 1.6rem 1fr auto; align-items: center;
+      gap: 0.45rem; padding: 0.28rem 0.35rem; border-radius: 0.8rem;
+    }
+    .row-active { background: rgb(255 255 255 / 0.05); }
+    .row-future { opacity: 0.42; }
+    .row-idx { font-variant-numeric: tabular-nums; font-size: 0.75rem; color: var(--color-brass); }
+    .row-pegs { display: flex; justify-content: center; gap: 0.4rem; }
+    .slot { display: grid; place-items: center; padding: 0; border: 0; background: transparent; border-radius: 999px; }
+    .slot.is-focus { box-shadow: 0 0 0 2px var(--color-brass); }
+    .hole, .peg { display: inline-grid; place-items: center; border-radius: 999px; }
+    .hole-lg, .peg-lg { width: 2.75rem; height: 2.75rem; }
+    .hole-md, .peg-md { width: 1.7rem; height: 1.7rem; }
+    .row[data-slots="5"] .hole-lg, .row[data-slots="5"] .peg-lg { width: 2.2rem; height: 2.2rem; }
+    .hole {
+      background: radial-gradient(circle at 50% 38%, #163028, #07110d 74%);
+      box-shadow: inset 0 3px 5px rgb(0 0 0 / 0.72), 0 1px 0 rgb(255 255 255 / 0.06);
+    }
+    .peg { box-shadow: inset 0 -7px 8px rgb(0 0 0 / 0.28), 0 2px 0 rgb(0 0 0 / 0.22); }
+    .peg-mark { font-size: 0.75rem; font-weight: 600; line-height: 1; color: #f7f1e6; text-shadow: 0 1px 1px rgb(0 0 0 / 0.35); }
+    .peg-md .peg-mark { font-size: 0.68rem; }
+    .peg[data-tone="3"] .peg-mark, .peg[data-tone="4"] .peg-mark, .peg[data-tone="5"] .peg-mark { color: #1a120c; text-shadow: none; }
+    .peg[data-tone="0"] { background: radial-gradient(circle at 32% 28%, rgb(255 255 255 / 0.72), transparent 26%), radial-gradient(circle at 50% 62%, #e15a4c, #8d241c); }
+    .peg[data-tone="1"] { background: radial-gradient(circle at 32% 28%, rgb(255 255 255 / 0.7), transparent 26%), radial-gradient(circle at 50% 62%, #4d82ee, #1a3f93); }
+    .peg[data-tone="2"] { background: radial-gradient(circle at 32% 28%, rgb(255 255 255 / 0.65), transparent 26%), radial-gradient(circle at 50% 62%, #2eaf68, #146338); }
+    .peg[data-tone="3"] { background: radial-gradient(circle at 32% 28%, rgb(255 255 255 / 0.75), transparent 26%), radial-gradient(circle at 50% 62%, #f0cb55, #b88812); }
+    .peg[data-tone="4"] { background: radial-gradient(circle at 32% 28%, rgb(255 255 255 / 0.7), transparent 26%), radial-gradient(circle at 50% 62%, #f0893d, #b14812); }
+    .peg[data-tone="5"] { background: radial-gradient(circle at 32% 28%, rgb(255 255 255 / 0.9), transparent 28%), radial-gradient(circle at 50% 70%, #f7f3ea, #cfc6b4); box-shadow: inset 0 -7px 8px rgb(80 60 30 / 0.18), 0 0 0 1px rgb(0 0 0 / 0.28), 0 2px 0 rgb(0 0 0 / 0.18); }
+    .peg[data-tone="6"] { background: radial-gradient(circle at 32% 28%, rgb(255 255 255 / 0.55), transparent 26%), radial-gradient(circle at 50% 62%, #9aa8b5, #4d5b68); }
+    .peg[data-tone="7"] { background: radial-gradient(circle at 32% 28%, rgb(255 255 255 / 0.45), transparent 26%), radial-gradient(circle at 50% 62%, #b24a66, #6d2036); }
+    .pins { display: grid; grid-template-columns: repeat(2, 0.62rem); gap: 0.22rem; width: 1.5rem; }
+    .pin { width: 0.62rem; height: 0.62rem; border-radius: 999px; display: block; }
+    .pin-empty { background: #0c1c17; box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.65); }
+    .pin-exact { background: radial-gradient(circle at 35% 30%, #fff, #1a120c 70%); box-shadow: 0 1px 0 rgb(0 0 0 / 0.35); }
+    .pin-color { background: radial-gradient(circle at 35% 30%, #fff, #e7dcc6 62%, #b7aa93); box-shadow: 0 0 0 1px rgb(0 0 0 / 0.25), 0 1px 0 rgb(0 0 0 / 0.25); }
+    .swatches { display: grid; gap: 0.25rem; }
+    .cols-3 { grid-template-columns: repeat(3, 1fr); }
+    .cols-4 { grid-template-columns: repeat(4, 1fr); }
+    .swatch {
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.3rem;
+      min-height: 4.25rem; padding: 0.35rem 0.15rem; border: 0; border-radius: 0.8rem;
+      background: transparent; color: var(--color-ivory-dim); font-size: 0.75rem; font-weight: 500;
+    }
+    .swatch.is-on { background: rgb(255 255 255 / 0.05); color: var(--color-ivory); }
+    .swatch:disabled { opacity: 0.32; }
+    .level {
+      display: flex; width: 100%; flex-direction: column; align-items: flex-start; gap: 0.15rem;
+      min-height: 4.25rem; padding: 0.75rem 0.9rem; border-radius: 0.9rem;
+      border: 1px solid var(--color-line); background: color-mix(in srgb, var(--color-espresso) 80%, transparent);
+      color: var(--color-ivory); text-align: left;
+    }
+    .level.is-on { border-color: var(--color-brass); box-shadow: inset 3px 0 0 var(--color-brass); }
+    .level strong { font-family: var(--font-display); font-size: 1.25rem; font-weight: 560; }
+    .level small { color: var(--color-ivory-dim); font-size: 0.8rem; }
+    .btn { height: 3rem; border-radius: 999px; padding-inline: 1.1rem; font-weight: 600; font-size: 1rem; }
+    .btn-primary { background: var(--color-brass); color: var(--color-ink); border: 0; }
+    .btn-primary:disabled { opacity: 0.4; }
+    .btn-ghost { border: 1px solid var(--color-line); background: transparent; color: var(--color-ivory); }
+    .grow { flex: 1; }
+    .bar { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+    .foot { padding: 0.75rem 1rem; }
+    .note { min-height: 1.25rem; text-align: center; font-size: 0.9rem; margin-bottom: 0.5rem; }
+    .linkish { background: none; border: 0; color: var(--color-ivory-dim); text-decoration: underline; text-underline-offset: 2px; font-size: 0.9rem; padding: 0.5rem 0; }
+    .between { display: flex; align-items: center; justify-content: space-between; margin-top: 0.35rem; }
+    .legend { display: flex; flex-wrap: wrap; gap: 0.35rem 1rem; margin-top: 0.5rem; padding: 0 0.25rem; font-size: 0.9rem; }
+    .legend span { display: inline-flex; align-items: center; gap: 0.5rem; }
+    .banner-win, .banner-lose { border-radius: 1rem; padding: 0.85rem 0.9rem 1rem; }
+    .banner-win { background: color-mix(in srgb, var(--color-brass) 16%, var(--color-espresso)); border: 1px solid color-mix(in srgb, var(--color-brass) 55%, transparent); }
+    .banner-lose { background: var(--color-espresso); border: 1px solid var(--color-line); }
+    .code-line { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; }
+    .sheet { position: fixed; inset: 0; z-index: 30; display: flex; align-items: flex-end; justify-content: center; padding: 1rem; background: rgb(20 15 12 / 0.72); }
+    .sheet-card { width: min(100%, 26rem); border-radius: 1.1rem; border: 1px solid var(--color-line); background: var(--color-espresso); padding: 1.15rem 1.15rem 1.25rem; }
+    .sheet-card ul { margin: 0.75rem 0 0; padding-left: 1.1rem; }
+    .sheet-card li { margin: 0.35rem 0; }
+    .center { text-align: center; }
+    @keyframes nudge { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-4px); } 45% { transform: translateX(4px); } 70% { transform: translateX(-2px); } }
+    @media (prefers-reduced-motion: reduce) { .case.is-shaking { animation: none !important; } }
+    @media (min-width: 640px) { .sheet { align-items: center; } .hint { display: block !important; } }
+    .hint { display: none; font-size: 0.75rem; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    const PEGS = ["Rouge", "Bleu", "Vert", "Jaune", "Orange", "Blanc", "Gris", "Bordeaux"];
+    const LEVELS = {
+      initiation: { id: "initiation", label: "Initiation", detail: "4 cases · 4 couleurs · sans doublon · 8 essais", rule: "Chaque couleur n’apparaît qu’une fois.", slots: 4, colors: 4, tries: 8, duplicates: false },
+      classique: { id: "classique", label: "Classique", detail: "4 cases · 6 couleurs · doublons · 10 essais", rule: "Une couleur peut revenir plusieurs fois.", slots: 4, colors: 6, tries: 10, duplicates: true },
+      expert: { id: "expert", label: "Expert", detail: "5 cases · 8 couleurs · doublons · 12 essais", rule: "Une couleur peut revenir plusieurs fois.", slots: 5, colors: 8, tries: 12, duplicates: true },
+    };
+    const STATS_KEY = "casse-code-stats-v1";
+    const MUTE_KEY = "casse-code-mute";
+    const emptyStats = () => ({ version: 1, played: 0, won: 0, streak: 0, bestStreak: 0, best: { initiation: null, classique: null, expert: null } });
+
+    const state = {
+      phase: "menu",
+      levelId: "classique",
+      secret: [],
+      history: [],
+      draft: [],
+      focus: 0,
+      status: "playing",
+      note: null,
+      help: false,
+      muted: localStorage.getItem(MUTE_KEY) === "1",
+      shaking: false,
+      isRecord: false,
+      arm: false,
+      stats: loadStats(),
+    };
+
+    let audioCtx = null;
+    function unlock() {
+      const Ctor = window.AudioContext || window.webkitAudioContext;
+      if (!Ctor) return;
+      if (!audioCtx) audioCtx = new Ctor();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+    }
+    function tone(freq, when, dur, type, volume) {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, when);
+      gain.gain.setValueAtTime(volume, when);
+      gain.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(when);
+      osc.stop(when + dur + 0.02);
+    }
+    function sfx(kind) {
+      if (state.muted || !audioCtx || audioCtx.state !== "running") return;
+      const t = audioCtx.currentTime;
+      if (kind === "place") tone(520, t, 0.05, "triangle", 0.04);
+      if (kind === "bad") tone(130, t, 0.14, "sine", 0.05);
+      if (kind === "score") { tone(330, t, 0.07, "sine", 0.04); tone(494, t + 0.06, 0.09, "sine", 0.035); }
+      if (kind === "win") [523, 659, 784, 1046].forEach((f, i) => tone(f, t + i * 0.08, 0.16, "triangle", 0.045));
+      if (kind === "lose") [392, 311, 247].forEach((f, i) => tone(f, t + i * 0.11, 0.18, "sine", 0.045));
+    }
+
+    function loadStats() {
+      try {
+        const data = JSON.parse(localStorage.getItem(STATS_KEY) || "");
+        if (!data || data.version !== 1 || !data.best) return emptyStats();
+        const base = emptyStats();
+        return { ...base, played: num(data.played), won: num(data.won), streak: num(data.streak), bestStreak: num(data.bestStreak), best: {
+          initiation: orNull(data.best.initiation), classique: orNull(data.best.classique), expert: orNull(data.best.expert),
+        } };
+      } catch { return emptyStats(); }
+    }
+    function num(v) { return typeof v === "number" ? v : 0; }
+    function orNull(v) { return typeof v === "number" && Number.isFinite(v) ? v : null; }
+    function saveStats() { localStorage.setItem(STATS_KEY, JSON.stringify(state.stats)); }
+
+    function level() { return LEVELS[state.levelId]; }
+    function makeSecret(lv) {
+      if (!lv.duplicates && lv.slots <= lv.colors) {
+        const pool = Array.from({ length: lv.colors }, (_, i) => i);
+        const secret = [];
+        for (let i = 0; i < lv.slots; i++) secret.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+        return secret;
+      }
+      return Array.from({ length: lv.slots }, () => Math.floor(Math.random() * lv.colors));
+    }
+    function scoreGuess(secret, guess) {
+      let exact = 0;
+      const secretLeft = [];
+      const guessLeft = [];
+      for (let i = 0; i < secret.length; i++) {
+        if (secret[i] === guess[i]) exact += 1;
+        else { secretLeft.push(secret[i]); guessLeft.push(guess[i]); }
+      }
+      const counts = new Map();
+      for (const tone of secretLeft) counts.set(tone, (counts.get(tone) || 0) + 1);
+      let color = 0;
+      for (const tone of guessLeft) {
+        const left = counts.get(tone) || 0;
+        if (left > 0) { color += 1; counts.set(tone, left - 1); }
+      }
+      return { exact, color };
+    }
+    function phrase(exact, color) {
+      if (exact === 0 && color === 0) return "Aucune couleur du code.";
+      const bits = [];
+      if (exact === 1) bits.push("1 bien placée");
+      else if (exact > 1) bits.push(exact + " bien placées");
+      if (color === 1) bits.push("1 ailleurs");
+      else if (color > 1) bits.push(color + " ailleurs");
+      return bits.join(" · ");
+    }
+    function peg(tone, size) {
+      return '<span class="peg peg-' + size + '" data-tone="' + tone + '"><span class="peg-mark">' + (tone + 1) + "</span></span>";
+    }
+    function hole(size) { return '<span class="hole hole-' + size + '"></span>'; }
+    function pins(slots, exact, color, revealed) {
+      const kinds = [];
+      if (revealed) {
+        for (let i = 0; i < exact; i++) kinds.push("exact");
+        for (let i = 0; i < color; i++) kinds.push("color");
+      }
+      while (kinds.length < slots) kinds.push("empty");
+      return '<div class="pins" aria-hidden="true">' + kinds.map((k) => '<span class="pin pin-' + k + '"></span>').join("") + "</div>";
+    }
+    function esc(s) {
+      return String(s)
+        .replace(/&/g, "\u0026amp;")
+        .replace(/</g, "\u0026lt;")
+        .replace(/>/g, "\u0026gt;")
+        .replace(/"/g, "\u0026quot;");
+    }
+
+    function begin(id) {
+      unlock();
+      const lv = LEVELS[id];
+      state.levelId = id;
+      state.secret = makeSecret(lv);
+      state.history = [];
+      state.draft = Array(lv.slots).fill(null);
+      state.focus = 0;
+      state.status = "playing";
+      state.phase = "play";
+      state.note = null;
+      state.isRecord = false;
+      state.arm = false;
+      state.help = false;
+      render();
+    }
+    function place(color) {
+      const lv = level();
+      if (state.help || state.phase !== "play" || state.status !== "playing") return;
+      if (color < 0 || color >= lv.colors) return;
+      if (!lv.duplicates && state.draft.includes(color) && state.draft[state.focus] !== color) {
+        state.note = "Cette couleur est déjà posée.";
+        shake(); sfx("bad"); render(); return;
+      }
+      state.draft[state.focus] = color;
+      state.arm = false;
+      state.note = null;
+      sfx("place");
+      if (state.draft.some((c) => c == null)) {
+        for (let step = 1; step <= lv.slots; step++) {
+          const index = (state.focus + step) % lv.slots;
+          if (state.draft[index] == null) { state.focus = index; break; }
+        }
+      }
+      render();
+    }
+    function clearOne() {
+      const lv = level();
+      if (state.help || state.phase !== "play" || state.status !== "playing") return;
+      if (state.draft[state.focus] != null) { state.draft[state.focus] = null; state.note = null; render(); return; }
+      for (let step = 1; step <= lv.slots; step++) {
+        const index = (state.focus - step + lv.slots) % lv.slots;
+        if (state.draft[index] != null) { state.draft[index] = null; state.focus = index; state.note = null; render(); return; }
+      }
+    }
+    function submit() {
+      const lv = level();
+      if (state.help || state.phase !== "play" || state.status !== "playing") return;
+      if (state.draft.some((c) => c == null)) { state.note = "Complète chaque case."; shake(); sfx("bad"); render(); return; }
+      const guess = state.draft.slice();
+      const result = scoreGuess(state.secret, guess);
+      const turns = state.history.length + 1;
+      const won = result.exact === lv.slots;
+      const lost = !won && turns >= lv.tries;
+      state.history.push({ guess, exact: result.exact, color: result.color });
+      state.note = phrase(result.exact, result.color);
+      state.arm = false;
+      sfx(won ? "win" : lost ? "lose" : "score");
+      if (won || lost) { state.status = won ? "won" : "lost"; commit(won, turns); }
+      state.draft = Array(lv.slots).fill(null);
+      state.focus = 0;
+      render();
+    }
+    function abandon() {
+      if (state.status !== "playing") return;
+      state.status = "lost";
+      state.note = null;
+      state.arm = false;
+      sfx("lose");
+      commit(false, state.history.length);
+      render();
+    }
+    function commit(won, turns) {
+      const prev = state.stats;
+      const next = { ...prev, played: prev.played + 1, won: prev.won + (won ? 1 : 0), streak: won ? prev.streak + 1 : 0, bestStreak: prev.bestStreak, best: { ...prev.best } };
+      if (won) {
+        next.bestStreak = Math.max(prev.bestStreak, next.streak);
+        const best = prev.best[state.levelId];
+        const beaten = best == null || turns < best;
+        if (beaten) next.best[state.levelId] = turns;
+        state.isRecord = beaten;
+      } else state.isRecord = false;
+      state.stats = next;
+      saveStats();
+    }
+    function shake() {
+      state.shaking = false;
+      render();
+      requestAnimationFrame(() => { state.shaking = true; render(); setTimeout(() => { state.shaking = false; render(); }, 320); });
+    }
+    function toggleMute() {
+      unlock();
+      state.muted = !state.muted;
+      localStorage.setItem(MUTE_KEY, state.muted ? "1" : "0");
+      render();
+    }
+
+    function iconSound() {
+      return state.muted
+        ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="m22 9-6 6M16 9l6 6"/></svg>'
+        : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19 7a8 8 0 0 1 0 10"/></svg>';
+    }
+    function iconHelp() {
+      return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>';
+    }
+
+    function render() {
+      const root = document.getElementById("app");
+      const rack = root.querySelector(".rack");
+      const scroll = rack ? rack.scrollTop : 0;
+      root.innerHTML = state.phase === "menu" ? menu() : play();
+      const next = root.querySelector(".rack");
+      if (next) next.scrollTop = scroll;
+    }
+
+    function menu() {
+      const lv = level();
+      const s = state.stats;
+      const cards = Object.values(LEVELS).map((item) => {
+        const on = item.id === state.levelId;
+        const best = s.best[item.id];
+        return '<button type="button" class="level' + (on ? " is-on" : "") + '" data-act="pick" data-id="' + item.id + '" role="radio" aria-checked="' + on + '"><strong>' + item.label + "</strong><small>" + item.detail + "</small>" + (best != null ? "<small>Record : " + best + " essai" + (best > 1 ? "s" : "") + "</small>" : "") + "</button>";
+      }).join("");
+      return '<div class="shell menu"><div class="pad safe-bottom">' +
+        '<header class="row-head"><div><div class="logo" aria-hidden="true"><i style="background:#d13b32"></i><i style="background:#2a62d0"></i><i style="background:#e6b325"></i><i style="background:#e06a22"></i></div><p class="kicker">Mastermind</p><h1>Casse-code</h1></div><div class="actions">' +
+        '<button type="button" class="icon-btn" data-act="mute" aria-label="' + (state.muted ? "Activer le son" : "Couper le son") + '">' + iconSound() + "</button>" +
+        '<button type="button" class="icon-btn" data-act="help" aria-label="Règles">' + iconHelp() + "</button></div></header>" +
+        '<p class="dim">Un code est caché. Chaque essai dit ce qui est juste — jamais quelle case.</p>' +
+        '<div class="case" style="padding:0.75rem"><div class="row" data-slots="4"><span class="row-idx">ex</span><div class="row-pegs">' + [0, 0, 1, 3].map((t) => peg(t, "lg")).join("") + "</div>" + pins(4, 1, 1, true) + '</div><div class="legend dim"><span><i class="pin pin-exact"></i> Bien placée</span><span><i class="pin pin-color"></i> Ailleurs</span></div></div>' +
+        '<div role="radiogroup" aria-label="Niveau" style="display:flex;flex-direction:column;gap:0.5rem">' + cards + "</div>" +
+        '<p class="dim" style="font-size:0.9rem">' + lv.rule + "</p>" +
+        '<button type="button" class="btn btn-primary" data-act="play">Jouer · ' + lv.label + "</button>" +
+        '<p class="dim center" style="font-size:0.9rem">' + (s.played === 0 ? "Aucune partie pour l’instant." : s.won + " victoire" + (s.won > 1 ? "s" : "") + " sur " + s.played + " · série " + s.streak) + "</p>" +
+        helpSheet() + "</div></div>";
+    }
+
+    function play() {
+      const lv = level();
+      const activeIndex = state.status === "playing" ? state.history.length : -1;
+      const rows = Array.from({ length: lv.tries }, (_, index) => {
+        const turn = state.history[index];
+        const active = index === activeIndex;
+        const future = !turn && !active;
+        let pegs = "";
+        for (let slot = 0; slot < lv.slots; slot++) {
+          const tone = active ? state.draft[slot] : turn ? turn.guess[slot] : null;
+          const body = tone == null ? hole("lg") : peg(tone, "lg");
+          if (!active) pegs += "<span>" + body + "</span>";
+          else pegs += '<button type="button" class="slot' + (state.focus === slot ? " is-focus" : "") + '" data-act="focus" data-slot="' + slot + '" aria-label="' + (tone == null ? "Case " + (slot + 1) + ", vide" : "Case " + (slot + 1) + ", " + PEGS[tone]) + '">' + body + "</button>";
+        }
+        return '<div class="row' + (active ? " row-active" : "") + (future ? " row-future" : "") + '" data-slots="' + lv.slots + '"><span class="row-idx">' + String(index + 1).padStart(2, "0") + '</span><div class="row-pegs">' + pegs + "</div>" + pins(lv.slots, turn ? turn.exact : 0, turn ? turn.color : 0, Boolean(turn)) + "</div>";
+      }).join("");
+      const complete = state.draft.length > 0 && state.draft.every((c) => c != null);
+      const swatches = PEGS.slice(0, lv.colors).map((name, tone) => {
+        const used = !lv.duplicates && state.draft.includes(tone) && state.draft[state.focus] !== tone;
+        return '<button type="button" class="swatch' + (state.draft[state.focus] === tone ? " is-on" : "") + '" data-act="place" data-tone="' + tone + '"' + (used ? " disabled" : "") + ' aria-label="' + name + ", touche " + (tone + 1) + '">' + peg(tone, "md") + name + "</button>";
+      }).join("");
+      let footer;
+      if (state.status === "playing") {
+        footer = '<div class="swatches ' + (lv.colors === 6 ? "cols-3" : "cols-4") + '">' + swatches + "</div>" +
+          '<div class="bar"><button type="button" class="btn btn-ghost" data-act="clear">Effacer</button><button type="button" class="btn btn-primary grow" data-act="submit"' + (complete ? "" : " disabled") + ">Valider</button></div>" +
+          '<div class="between"><button type="button" class="linkish" data-act="abandon">' + (state.arm ? "Confirmer l’abandon" : "Abandonner") + '</button><p class="hint dim">Touches 1 à ' + lv.colors + " · Entrée</p></div>";
+      } else {
+        const won = state.status === "won";
+        const turns = state.history.length;
+        footer = '<div class="' + (won ? "banner-win" : "banner-lose") + '"><h2>' + (won ? "Cassé." : "Le code tient.") + "</h2><p class=\"dim\" style=\"margin-top:0.25rem;font-size:0.9rem\">" +
+          (won ? "En " + turns + " essai" + (turns > 1 ? "s" : "") + "." : turns === 0 ? "Aucun essai joué." : "Après " + turns + " essai" + (turns > 1 ? "s" : "") + ".") +
+          (won && state.isRecord ? " Record du niveau." : "") + (won && state.stats.streak > 1 ? " Série de " + state.stats.streak + "." : "") +
+          '</p><div class="code-line"><span class="dim" style="font-size:0.9rem">Code</span>' + state.secret.map((t) => peg(t, "md")).join("") + "</div>" +
+          '<div class="bar"><button type="button" class="btn btn-primary grow" data-act="again">Rejouer</button><button type="button" class="btn btn-ghost" data-act="menu">Menu</button></div></div>';
+      }
+      return '<div class="shell play"><header class="row-head" style="padding:1rem 1rem 0.75rem"><div><p class="kicker">Mastermind</p><h1>Casse-code</h1><p class="dim" style="margin-top:0.25rem;font-size:0.9rem">' + lv.label + " · " + (state.status === "playing" ? "essai " + (state.history.length + 1) + " / " + lv.tries : state.history.length + " essai" + (state.history.length > 1 ? "s" : "")) + '</p></div><div class="actions"><button type="button" class="icon-btn" data-act="mute" aria-label="' + (state.muted ? "Activer le son" : "Couper le son") + '">' + iconSound() + '</button><button type="button" class="icon-btn" data-act="help" aria-label="Règles">' + iconHelp() + '</button></div></header>' +
+        '<div class="case board' + (state.shaking ? " is-shaking" : "") + '"><div class="rack">' + rows + "</div></div>" +
+        '<footer class="foot safe-bottom"><p class="note dim" aria-live="polite">' + esc(state.note ?? (state.status === "playing" ? lv.rule : "")) + "</p>" + footer + "</footer>" + helpSheet() + "</div>";
+    }
+
+    function helpSheet() {
+      if (!state.help) return "";
+      return '<div class="sheet" data-act="close-help"><div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="rules-title"><h2 id="rules-title">Comment lire le plateau</h2><ul><li>Un pion sombre : bonne couleur, bonne case.</li><li>Un pion clair : bonne couleur, mauvaise case.</li><li>L’ordre de ces pions ne dit pas quelle case.</li><li>Le chiffre gravé permet de jouer sans se fier seulement à la teinte.</li></ul><button type="button" class="btn btn-primary" style="width:100%;margin-top:1rem" data-act="close-help-btn">Compris</button></div></div>';
+    }
+
+    document.getElementById("app").addEventListener("click", (event) => {
+      const sheet = event.target.closest(".sheet");
+      const card = event.target.closest(".sheet-card");
+      const el = event.target.closest("[data-act]");
+      if (sheet && !card) { state.help = false; render(); return; }
+      if (!el) return;
+      const act = el.dataset.act;
+      if (act === "close-help" && card) return;
+      if (act === "pick") { state.levelId = el.dataset.id; render(); }
+      if (act === "play" || act === "again") begin(state.levelId);
+      if (act === "menu") { state.phase = "menu"; state.help = false; render(); }
+      if (act === "mute") toggleMute();
+      if (act === "help") { state.help = true; render(); }
+      if (act === "close-help" || act === "close-help-btn") { state.help = false; render(); }
+      if (act === "place") place(Number(el.dataset.tone));
+      if (act === "focus") { state.focus = Number(el.dataset.slot); render(); }
+      if (act === "clear") clearOne();
+      if (act === "submit") submit();
+      if (act === "abandon") { if (state.arm) abandon(); else { state.arm = true; render(); } }
+    });
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") { state.help = false; render(); return; }
+      if (event.key === "ArrowLeft") { event.preventDefault(); if (state.phase === "play" && state.status === "playing" && !state.help) { state.focus = Math.max(0, state.focus - 1); render(); } return; }
+      if (event.key === "ArrowRight") { event.preventDefault(); if (state.phase === "play" && state.status === "playing" && !state.help) { state.focus = Math.min(level().slots - 1, state.focus + 1); render(); } return; }
+      if (event.key === "Backspace") { event.preventDefault(); clearOne(); return; }
+      if (event.key === "Enter") { event.preventDefault(); if (state.phase === "menu") begin(state.levelId); else submit(); return; }
+      if (event.key >= "1" && event.key <= "8") place(Number(event.key) - 1);
+    });
+
+    render();
+  </script>
+</body>
+</html>

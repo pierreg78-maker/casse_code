@@ -159,6 +159,12 @@
     const MUTE_KEY = "casse-code-mute";
     const emptyStats = () => ({ version: 1, played: 0, won: 0, streak: 0, bestStreak: 0, best: { initiation: null, classique: null, expert: null } });
 
+    // Accès au stockage protégé : si le navigateur le bloque, le jeu fonctionne quand même.
+    const store = {
+      get(key) { try { return localStorage.getItem(key); } catch { return null; } },
+      set(key, value) { try { localStorage.setItem(key, value); } catch { /* stockage indisponible */ } },
+    };
+
     const state = {
       phase: "menu",
       levelId: "classique",
@@ -169,7 +175,7 @@
       status: "playing",
       note: null,
       help: false,
-      muted: localStorage.getItem(MUTE_KEY) === "1",
+      muted: store.get(MUTE_KEY) === "1",
       shaking: false,
       isRecord: false,
       arm: false,
@@ -208,7 +214,7 @@
 
     function loadStats() {
       try {
-        const data = JSON.parse(localStorage.getItem(STATS_KEY) || "");
+        const data = JSON.parse(store.get(STATS_KEY) || "");
         if (!data || data.version !== 1 || !data.best) return emptyStats();
         const base = emptyStats();
         return { ...base, played: num(data.played), won: num(data.won), streak: num(data.streak), bestStreak: num(data.bestStreak), best: {
@@ -218,7 +224,7 @@
     }
     function num(v) { return typeof v === "number" ? v : 0; }
     function orNull(v) { return typeof v === "number" && Number.isFinite(v) ? v : null; }
-    function saveStats() { localStorage.setItem(STATS_KEY, JSON.stringify(state.stats)); }
+    function saveStats() { store.set(STATS_KEY, JSON.stringify(state.stats)); }
 
     function level() { return LEVELS[state.levelId]; }
     function makeSecret(lv) {
@@ -271,10 +277,10 @@
     }
     function esc(s) {
       return String(s)
-        .replace(/&/g, "\u0026amp;")
-        .replace(/</g, "\u0026lt;")
-        .replace(/>/g, "\u0026gt;")
-        .replace(/"/g, "\u0026quot;");
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
     }
 
     function begin(id) {
@@ -370,7 +376,7 @@
     function toggleMute() {
       unlock();
       state.muted = !state.muted;
-      localStorage.setItem(MUTE_KEY, state.muted ? "1" : "0");
+      store.set(MUTE_KEY, state.muted ? "1" : "0");
       render();
     }
 
@@ -389,7 +395,12 @@
       const scroll = rack ? rack.scrollTop : 0;
       root.innerHTML = state.phase === "menu" ? menu() : play();
       const next = root.querySelector(".rack");
-      if (next) next.scrollTop = scroll;
+      if (next) {
+        next.scrollTop = scroll;
+        // Garde la ligne en cours visible (utile quand il y a beaucoup d'essais)
+        const active = next.querySelector(".row-active");
+        if (active) active.scrollIntoView({ block: "nearest" });
+      }
     }
 
     function menu() {
